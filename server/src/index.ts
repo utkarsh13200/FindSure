@@ -26,8 +26,9 @@ const app = createApp();
 const port = Number(process.env.PORT) || 4000;
 
 if (process.env.NODE_ENV !== "test") {
-  app.listen(port, () => {
-    console.log(`FindSure API listening on http://localhost:${port}`);
+  // Bind all interfaces so Railway (and similar hosts) can reach the service.
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`FindSure API listening on port ${port}`);
     console.log(`DEMO_MODE=${process.env.DEMO_MODE ?? "unset"}`);
   });
 }

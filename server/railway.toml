@@ -1,0 +1,12 @@
+# Railway config for the FindSure Express API (service root = /server).
+# Docs: https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
