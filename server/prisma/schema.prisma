@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite for local MVP; swap provider to "postgresql" and DATABASE_URL for production.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id            String   @id @default(cuid())
+  googlePlaceId String?  @unique
+  name          String
+  category      String   @default("laptop_repair")
+  address       String
+  latitude      Float
+  longitude     Float
+  phone         String?
+  website       String?
+  rating        Float?
+  reviewCount   Int      @default(0)
+  googleMapsUrl String?
+  openNow       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  verifications Verification[]
+  confirmations Confirmation[]
+  reports       Report[]
+  reviews       Review[]
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  businessId String
+  type       String
+  source     String   @default("system")
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model Confirmation {
+  id         String   @id @default(cuid())
+  businessId String
+  type       String
+  source     String   @default("user")
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  businessId  String
+  type        String
+  description String?
+  reporterName String?
+  reporterEmail String?
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  businessId String
+  author     String
+  rating     Int
+  text       String
+  reviewDate DateTime
+  source     String   @default("google")
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}

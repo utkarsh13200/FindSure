@@ -1,0 +1,20 @@
+{
+  "name": "findsure",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FindSure — Know before you go. Local business trust & freshness MVP.",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c teal,blue \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "test": "npm test --prefix server && npm test --prefix client",
+    "db:migrate": "npm run db:migrate --prefix server",
+    "db:seed": "npm run db:seed --prefix server",
+    "setup": "npm run install:all && npm run db:migrate --prefix server && npm run db:seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
