@@ -13,9 +13,9 @@ execSync("npx prisma migrate deploy", { stdio: "inherit" });
 const prisma = new PrismaClient();
 try {
   const count = await prisma.business.count();
-  // Marker from the 99-city / 8-shops-per-city seed (findsure-v3).
+  // Marker from the 99-city / 8-shops / 10 km seed (findsure-v4).
   const latestSeedMarker = await prisma.business.findFirst({
-    where: { googlePlaceId: { startsWith: "demo_maheshtala_" } },
+    where: { googlePlaceId: { startsWith: "demo_v4_" } },
     select: { id: true },
   });
 

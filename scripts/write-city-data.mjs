@@ -128,7 +128,7 @@ export type CityLocation = {
   aliases: string[];
 };
 
-export const CITY_SEARCH_RADIUS_KM = 15;
+export const CITY_SEARCH_RADIUS_KM = 10;
 
 export const INDIA_CENTER = { lat: 22.5937, lng: 78.9629 };
 
@@ -377,7 +377,7 @@ function buildShop(
   shopIndex: number,
   usedNames: Set<string>
 ) {
-  const rng = mulberry32(hashStr(\`\${city.id}::\${shopIndex}::findsure-v3\`));
+  const rng = mulberry32(hashStr(\`\${city.id}::\${shopIndex}::findsure-v4\`));
   const tier = tiersForCity(cityIndex)[shopIndex];
   const area = city.areas[shopIndex % city.areas.length];
 
@@ -405,8 +405,8 @@ function buildShop(
   }
   usedNames.add(name);
 
-  const dLat = floatBetween(rng, -7.5, 7.5, 2);
-  const dLng = floatBetween(rng, -7.5, 7.5, 2);
+  const dLat = floatBetween(rng, -4.5, 4.5, 2);
+  const dLng = floatBetween(rng, -4.5, 4.5, 2);
   const pos = offsetLatLng(city.lat, city.lng, dLat, dLng);
 
   const streetNo = intBetween(rng, 3, 240);
@@ -616,7 +616,7 @@ function buildShop(
     googleMapsUrl: \`https://www.google.com/maps/search/?api=1&query=\${encodeURIComponent(
       \`\${name} \${area} \${city.name}\`
     )}\`,
-    googlePlaceId: \`demo_\${city.id}_\${shopIndex + 1}_\${hashStr(name).toString(16)}\`,
+    googlePlaceId: \`demo_v4_\${city.id}_\${shopIndex + 1}_\${hashStr(name).toString(16)}\`,
     verifications,
     confirmations,
     reports,

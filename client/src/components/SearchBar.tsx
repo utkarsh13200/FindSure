@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { LocateFixed, Search } from "lucide-react";
-import { INDIA_CITIES, resolveIndiaLocation } from "../utils/indiaCities";
+import { INDIA_CITIES, resolveIndiaLocation, CITY_SEARCH_RADIUS_KM } from "../utils/indiaCities";
 
 type SearchBarProps = {
   initialQuery?: string;
@@ -43,7 +43,7 @@ export function SearchBar({
       lng,
       locationLabel: useGeo ? locationLabel : resolved.label,
       indiaWide: useGeo ? false : resolved.isIndiaWide,
-      radiusKm: useGeo ? 15 : resolved.radiusKm,
+      radiusKm: useGeo ? CITY_SEARCH_RADIUS_KM : resolved.radiusKm,
     });
   }
 

@@ -7,7 +7,7 @@ export type CityLocation = {
   aliases: string[];
 };
 
-export const CITY_SEARCH_RADIUS_KM = 15;
+export const CITY_SEARCH_RADIUS_KM = 10;
 
 export const INDIA_CENTER = { lat: 22.5937, lng: 78.9629 };
 
@@ -18,7 +18,7 @@ export const INDIA_BOUNDS: [[number, number], [number, number]] = [
 
 /**
  * Searchable cities for FindSure demo. Each city seeds ≥8 unique laptop-repair shops
- * within CITY_SEARCH_RADIUS_KM of the city center.
+ * within CITY_SEARCH_RADIUS_KM (10 km) of the city center.
  */
 export const INDIA_CITIES: CityLocation[] = [
   {
