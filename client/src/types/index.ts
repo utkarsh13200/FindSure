@@ -81,6 +81,8 @@ export type SearchParams = {
   outdated?: boolean;
   minRating?: number;
   maxDistance?: number;
+  /** When true, API skips the default 10 km distance cap. */
+  indiaWide?: boolean;
 };
 
 export type ReportType =

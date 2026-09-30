@@ -30,7 +30,10 @@ export function Header({ demoMode }: HeaderProps) {
           <NavLink to="/" end className={linkClass}>
             Search
           </NavLink>
-          <NavLink to="/search?q=laptop%20repair" className={linkClass}>
+          <NavLink
+            to="/search?q=Laptop%20repair&lat=19.076&lng=72.8777&loc=Mumbai%2C%20Maharashtra&india=0&radius=10"
+            className={linkClass}
+          >
             Businesses
           </NavLink>
           <a href="/#how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900">

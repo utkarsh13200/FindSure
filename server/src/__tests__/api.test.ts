@@ -14,10 +14,15 @@ describe("API", () => {
     if (count === 0) {
       throw new Error("Database empty — run npm run db:seed first");
     }
-    const any = await prisma.business.findFirst({ where: { name: "LaptopCare Solutions" } });
+    const any = await prisma.business.findFirst({
+      where: { googlePlaceId: { startsWith: "demo_v4_bengaluru_" } },
+    });
     const tech = await prisma.business.findFirst({ where: { name: "TechFix Hub" } });
-    businessId = any!.id;
-    techFixId = tech!.id;
+    if (!any || !tech) {
+      throw new Error("Expected seeded Bengaluru shops not found — run npm run db:seed");
+    }
+    businessId = any.id;
+    techFixId = tech.id;
   });
 
   it("GET /api/health", async () => {
@@ -40,7 +45,20 @@ describe("API", () => {
   it("GET /api/businesses/:id", async () => {
     const res = await request(app).get(`/api/businesses/${businessId}`);
     expect(res.status).toBe(200);
-    expect(res.body.business.name).toBe("LaptopCare Solutions");
+    expect(res.body.business.id).toBe(businessId);
+  });
+
+  it("GET /api/businesses/search stays within default 10 km", async () => {
+    const res = await request(app).get("/api/businesses/search").query({
+      q: "laptop repair",
+      lat: 12.9716,
+      lng: 77.5946,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBeGreaterThan(0);
+    for (const b of res.body.businesses) {
+      expect(b.distanceKm).toBeLessThanOrEqual(10);
+    }
   });
 
   it("GET /api/businesses/:id/trust", async () => {

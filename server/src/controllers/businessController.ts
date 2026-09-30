@@ -41,7 +41,17 @@ export async function search(req: Request, res: Response, next: NextFunction) {
       filterRecentlyVerified: req.query.recentlyVerified === "true",
       filterOutdated: req.query.outdated === "true",
       minRating: req.query.minRating ? Number(req.query.minRating) : undefined,
-      maxDistanceKm: req.query.maxDistance ? Number(req.query.maxDistance) : undefined,
+      // Default 10 km so clients that omit maxDistance still get local results.
+      // Pass maxDistance=0 (or india=1) for unbounded / India-wide search.
+      maxDistanceKm: (() => {
+        if (req.query.india === "1") return undefined;
+        if (req.query.maxDistance === undefined || req.query.maxDistance === "") {
+          return 10;
+        }
+        const n = Number(req.query.maxDistance);
+        if (!Number.isFinite(n) || n <= 0) return undefined;
+        return n;
+      })(),
     });
     res.json(result);
   } catch (err) {

@@ -30,6 +30,7 @@ export function searchBusinesses(params: SearchParams) {
   if (params.recentlyVerified) q.set("recentlyVerified", "true");
   if (params.outdated) q.set("outdated", "true");
   if (params.minRating != null) q.set("minRating", String(params.minRating));
+  if (params.indiaWide) q.set("india", "1");
   if (params.maxDistance != null) q.set("maxDistance", String(params.maxDistance));
 
   return request<import("../types").SearchResponse>(`/businesses/search?${q}`);

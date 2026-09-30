@@ -30,7 +30,7 @@ export function HomePage() {
             style={{ animationDelay: "80ms" }}
           >
             <SearchBar
-              onSearch={({ q, lat, lng, locationLabel, indiaWide }) => {
+              onSearch={({ q, lat, lng, locationLabel, indiaWide, radiusKm }) => {
                 const params = new URLSearchParams({
                   q,
                   lat: String(lat),
@@ -38,6 +38,9 @@ export function HomePage() {
                   loc: locationLabel,
                   india: indiaWide ? "1" : "0",
                 });
+                if (!indiaWide) {
+                  params.set("radius", String(radiusKm));
+                }
                 navigate(`/search?${params}`);
               }}
             />

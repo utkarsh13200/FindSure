@@ -26,12 +26,12 @@ export function SearchPage() {
   const lat = Number(params.get("lat") || DEFAULT_CENTER.lat);
   const lng = Number(params.get("lng") || DEFAULT_CENTER.lng);
   const loc = params.get("loc") || "India";
-  const indiaWide =
-    params.get("india") === "1" ||
-    resolveIndiaLocation(loc).isIndiaWide;
-  const cityRadiusKm = indiaWide
-    ? undefined
-    : resolveIndiaLocation(loc).radiusKm || CITY_SEARCH_RADIUS_KM;
+  const isCurrentLocation = loc === "Current location";
+  const resolvedLoc = resolveIndiaLocation(loc);
+  // Loc is source of truth — never treat a resolved city as India-wide just because
+  // an old `india=1` query param is still present. Near-me is also a local search.
+  const indiaWide = !isCurrentLocation && resolvedLoc.isIndiaWide;
+  const cityRadiusKm = indiaWide ? undefined : CITY_SEARCH_RADIUS_KM;
 
   const trustFilter = useMemo(() => {
     const parts: string[] = [];
@@ -41,6 +41,10 @@ export function SearchPage() {
     return parts.join(",") || undefined;
   }, [filters]);
 
+  const effectiveMaxDistance =
+    filters.maxDistance ??
+    (indiaWide ? undefined : cityRadiusKm ?? CITY_SEARCH_RADIUS_KM);
+
   const query = useQuery({
     queryKey: [
       "search",
@@ -48,14 +52,13 @@ export function SearchPage() {
       lat,
       lng,
       indiaWide,
-      cityRadiusKm,
+      effectiveMaxDistance,
       filters.sort,
       trustFilter,
       filters.openNow,
       filters.recentlyVerified,
       filters.outdated,
       filters.minRating,
-      filters.maxDistance,
     ],
     queryFn: () =>
       searchBusinesses({
@@ -68,10 +71,10 @@ export function SearchPage() {
         recentlyVerified: filters.recentlyVerified || undefined,
         outdated: filters.outdated || undefined,
         minRating: filters.minRating ?? undefined,
-        // India-wide: no distance cap. City search: focus on metro radius unless user set a filter.
-        maxDistance:
-          filters.maxDistance ??
-          (indiaWide ? undefined : cityRadiusKm ?? CITY_SEARCH_RADIUS_KM),
+        indiaWide: indiaWide || undefined,
+        // City / near-me: always cap at 10 km unless the user picks a tighter filter.
+        // India-wide: no distance cap (server honors india=1).
+        maxDistance: effectiveMaxDistance,
       }),
   });
 
@@ -86,14 +89,18 @@ export function SearchPage() {
           compact
           initialQuery={q}
           initialLocationLabel={loc}
-          onSearch={({ q: nq, lat: nlat, lng: nlng, locationLabel, indiaWide: wide }) => {
-            setParams({
+          onSearch={({ q: nq, lat: nlat, lng: nlng, locationLabel, indiaWide: wide, radiusKm }) => {
+            const next: Record<string, string> = {
               q: nq,
               lat: String(nlat),
               lng: String(nlng),
               loc: locationLabel,
               india: wide ? "1" : "0",
-            });
+            };
+            if (!wide) {
+              next.radius = String(radiusKm || CITY_SEARCH_RADIUS_KM);
+            }
+            setParams(next);
           }}
         />
 
