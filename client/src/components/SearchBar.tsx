@@ -1,6 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { LocateFixed, Search } from "lucide-react";
-import { INDIA_CITIES, resolveIndiaLocation, CITY_SEARCH_RADIUS_KM } from "../utils/indiaCities";
+import {
+  INDIA_CITIES,
+  resolveIndiaLocation,
+  CITY_SEARCH_RADIUS_KM,
+  findCityMention,
+} from "../utils/indiaCities";
 
 type SearchBarProps = {
   initialQuery?: string;
@@ -29,12 +34,43 @@ export function SearchBar({
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
+  useEffect(() => {
+    setQ(initialQuery);
+  }, [initialQuery]);
+
+  useEffect(() => {
+    if (initialLocationLabel === "Current location") {
+      setLocationLabel("Current location");
+      return;
+    }
+    const resolved = resolveIndiaLocation(initialLocationLabel);
+    setLocationLabel(resolved.label);
+    setCoords({ lat: resolved.lat, lng: resolved.lng });
+  }, [initialLocationLabel]);
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!q.trim()) return;
-    const resolved = resolveIndiaLocation(locationLabel);
-    // Prefer resolved city coords unless user used geolocation ("Current location")
+
     const useGeo = locationLabel === "Current location";
+    let resolved = resolveIndiaLocation(locationLabel);
+
+    // If location is still India/unknown-wide, try to read a city from the query
+    // (users often type "laptop repair Mumbai" in the first field).
+    if (!useGeo && resolved.isIndiaWide) {
+      const mentioned = findCityMention(q) || findCityMention(locationLabel);
+      if (mentioned) {
+        resolved = {
+          label: mentioned.label,
+          lat: mentioned.lat,
+          lng: mentioned.lng,
+          radiusKm: CITY_SEARCH_RADIUS_KM,
+          isIndiaWide: false,
+        };
+        setLocationLabel(mentioned.label);
+      }
+    }
+
     const lat = useGeo ? coords.lat : resolved.lat;
     const lng = useGeo ? coords.lng : resolved.lng;
     onSearch({
@@ -43,7 +79,7 @@ export function SearchBar({
       lng,
       locationLabel: useGeo ? locationLabel : resolved.label,
       indiaWide: useGeo ? false : resolved.isIndiaWide,
-      radiusKm: useGeo ? CITY_SEARCH_RADIUS_KM : resolved.radiusKm,
+      radiusKm: useGeo ? CITY_SEARCH_RADIUS_KM : resolved.radiusKm || CITY_SEARCH_RADIUS_KM,
     });
   }
 
@@ -106,7 +142,7 @@ export function SearchBar({
                 setCoords({ lat: resolved.lat, lng: resolved.lng });
               }
             }}
-            placeholder="Delhi, Mumbai, Bengaluru, Surat…"
+            placeholder="City — results within 10 km"
             list="india-cities"
             className="w-full border-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
           />

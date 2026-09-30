@@ -13,7 +13,7 @@ import {
 } from "../components/FiltersPanel";
 import { searchBusinesses } from "../services/api";
 import { DEFAULT_CENTER } from "../utils/format";
-import { resolveIndiaLocation, CITY_SEARCH_RADIUS_KM } from "../utils/indiaCities";
+import { resolveIndiaLocation, CITY_SEARCH_RADIUS_KM, findCityMention } from "../utils/indiaCities";
 
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -23,15 +23,24 @@ export function SearchPage() {
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
 
   const q = params.get("q") || "laptop repair";
-  const lat = Number(params.get("lat") || DEFAULT_CENTER.lat);
-  const lng = Number(params.get("lng") || DEFAULT_CENTER.lng);
   const loc = params.get("loc") || "India";
   const isCurrentLocation = loc === "Current location";
-  const resolvedLoc = resolveIndiaLocation(loc);
-  // Loc is source of truth — never treat a resolved city as India-wide just because
-  // an old `india=1` query param is still present. Near-me is also a local search.
-  const indiaWide = !isCurrentLocation && resolvedLoc.isIndiaWide;
-  const cityRadiusKm = indiaWide ? undefined : CITY_SEARCH_RADIUS_KM;
+
+  const resolvedFromLoc = resolveIndiaLocation(loc);
+  const cityFromQuery =
+    resolvedFromLoc.isIndiaWide && !isCurrentLocation ? findCityMention(q) : null;
+  const activeCity = cityFromQuery ?? (resolvedFromLoc.isIndiaWide ? null : resolvedFromLoc);
+
+  const indiaWide = !isCurrentLocation && !activeCity && resolvedFromLoc.isIndiaWide;
+  const lat = isCurrentLocation
+    ? Number(params.get("lat") || DEFAULT_CENTER.lat)
+    : activeCity?.lat ?? Number(params.get("lat") || DEFAULT_CENTER.lat);
+  const lng = isCurrentLocation
+    ? Number(params.get("lng") || DEFAULT_CENTER.lng)
+    : activeCity?.lng ?? Number(params.get("lng") || DEFAULT_CENTER.lng);
+  const locationLabel = isCurrentLocation
+    ? loc
+    : activeCity?.label ?? resolvedFromLoc.label;
 
   const trustFilter = useMemo(() => {
     const parts: string[] = [];
@@ -41,9 +50,10 @@ export function SearchPage() {
     return parts.join(",") || undefined;
   }, [filters]);
 
-  const effectiveMaxDistance =
-    filters.maxDistance ??
-    (indiaWide ? undefined : cityRadiusKm ?? CITY_SEARCH_RADIUS_KM);
+  // City / near-me searches are always capped at 10 km (or a tighter user filter).
+  const effectiveMaxDistance = indiaWide
+    ? filters.maxDistance ?? undefined
+    : filters.maxDistance ?? CITY_SEARCH_RADIUS_KM;
 
   const query = useQuery({
     queryKey: [
@@ -53,6 +63,7 @@ export function SearchPage() {
       lng,
       indiaWide,
       effectiveMaxDistance,
+      locationLabel,
       filters.sort,
       trustFilter,
       filters.openNow,
@@ -72,13 +83,18 @@ export function SearchPage() {
         outdated: filters.outdated || undefined,
         minRating: filters.minRating ?? undefined,
         indiaWide: indiaWide || undefined,
-        // City / near-me: always cap at 10 km unless the user picks a tighter filter.
-        // India-wide: no distance cap (server honors india=1).
         maxDistance: effectiveMaxDistance,
       }),
   });
 
-  const businesses = query.data?.businesses ?? [];
+  // Client-side safety net so far-away shops never render even if API params are missed.
+  const businesses = useMemo(() => {
+    const list = query.data?.businesses ?? [];
+    if (effectiveMaxDistance == null) return list;
+    return list.filter(
+      (b) => b.distanceKm == null || b.distanceKm <= effectiveMaxDistance
+    );
+  }, [query.data?.businesses, effectiveMaxDistance]);
   const demoMode = query.data?.demoMode ?? true;
 
   return (
@@ -139,12 +155,20 @@ export function SearchPage() {
             className={`${mobileView === "map" ? "hidden md:block" : "block"} space-y-3`}
             aria-live="polite"
           >
-            <div className="flex items-center justify-between">
-              <h1 className="font-display text-lg font-semibold text-slate-900">
-                {query.isLoading
-                  ? "Searching nearby…"
-                  : `${businesses.length} businesses found`}
-              </h1>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="font-display text-lg font-semibold text-slate-900">
+                  {query.isLoading
+                    ? "Searching nearby…"
+                    : `${businesses.length} businesses found`}
+                </h1>
+                {!indiaWide && (
+                  <p className="text-sm text-slate-500">
+                    Within {effectiveMaxDistance ?? CITY_SEARCH_RADIUS_KM} km of{" "}
+                    {locationLabel}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="lg:hidden">

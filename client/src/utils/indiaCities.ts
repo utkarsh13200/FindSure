@@ -767,9 +767,11 @@ export function resolveIndiaLocation(input: string): {
   let best: (typeof INDIA_CITIES)[number] | null = null;
   let bestLen = 0;
   for (const city of INDIA_CITIES) {
+    // Prefer real cities over the pan-India entry during fuzzy match.
+    if (city.label === "India") continue;
     const candidates = [city.label.toLowerCase(), ...city.aliases];
     for (const c of candidates) {
-      if (c.length < 4) continue;
+      if (c.length < 3) continue;
       if (raw.includes(c) || c.includes(raw)) {
         if (c.length > bestLen) {
           best = city;
@@ -785,15 +787,45 @@ export function resolveIndiaLocation(input: string): {
       lat: best.lat,
       lng: best.lng,
       radiusKm: best.radiusKm,
-      isIndiaWide: best.label === "India",
+      isIndiaWide: false,
     };
   }
 
+  // Unknown place: never fall back to India-wide (that was returning shops 1000+ km away).
   return {
     label: input.trim(),
     lat: INDIA_CENTER.lat,
     lng: INDIA_CENTER.lng,
-    radiusKm: 2500,
-    isIndiaWide: true,
+    radiusKm: CITY_SEARCH_RADIUS_KM,
+    isIndiaWide: false,
   };
+}
+
+/** Detect a known city name mentioned inside free text (query or location field). */
+export function findCityMention(text: string): CityLocation | null {
+  const raw = text.trim().toLowerCase();
+  if (!raw) return null;
+
+  let best: CityLocation | null = null;
+  let bestLen = 0;
+  for (const city of INDIA_CITIES) {
+    if (city.label === "India") continue;
+    const candidates = [
+      city.label.toLowerCase(),
+      city.label.split(",")[0].trim().toLowerCase(),
+      ...city.aliases,
+    ];
+    for (const c of candidates) {
+      if (c.length < 3) continue;
+      // Word-boundary-ish match so "surat" does not steal inside longer tokens wrongly
+      const re = new RegExp(`(?:^|[^a-z])${c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^a-z])`, "i");
+      if (re.test(raw) || raw === c) {
+        if (c.length > bestLen) {
+          best = city;
+          bestLen = c.length;
+        }
+      }
+    }
+  }
+  return best;
 }
