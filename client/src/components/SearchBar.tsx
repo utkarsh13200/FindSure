@@ -50,15 +50,15 @@ export function SearchBar({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!q.trim()) return;
+    if (!q.trim() && !locationLabel.trim()) return;
 
     const useGeo = locationLabel === "Current location";
     let resolved = resolveIndiaLocation(locationLabel);
+    let serviceQuery = (q.trim() || "Laptop repair");
 
-    // If location is still India/unknown-wide, try to read a city from the query
-    // (users often type "laptop repair Mumbai" in the first field).
-    if (!useGeo && resolved.isIndiaWide) {
-      const mentioned = findCityMention(q) || findCityMention(locationLabel);
+    // Pull a city out of the query / location when location is India, blank, or unrecognized.
+    if (!useGeo && (resolved.isIndiaWide || resolved.unresolved || !locationLabel.trim())) {
+      const mentioned = findCityMention(locationLabel) || findCityMention(serviceQuery);
       if (mentioned) {
         resolved = {
           label: mentioned.label,
@@ -71,10 +71,36 @@ export function SearchBar({
       }
     }
 
+    // If the user typed only a city in the service box, search laptop repair there.
+    const cityInQuery = findCityMention(serviceQuery);
+    if (
+      cityInQuery &&
+      !/\b(repair|laptop|phone|service|plumber|ac|car)\b/i.test(serviceQuery)
+    ) {
+      if (!useGeo) {
+        resolved = {
+          label: cityInQuery.label,
+          lat: cityInQuery.lat,
+          lng: cityInQuery.lng,
+          radiusKm: CITY_SEARCH_RADIUS_KM,
+          isIndiaWide: false,
+        };
+        setLocationLabel(cityInQuery.label);
+      }
+      serviceQuery = "Laptop repair";
+    }
+
+    // Never search the empty India-center fallback for an unresolved city name.
+    if (!useGeo && resolved.unresolved) {
+      setGeoError("Choose a city from the list (e.g. Mumbai, Delhi, Bengaluru).");
+      return;
+    }
+
     const lat = useGeo ? coords.lat : resolved.lat;
     const lng = useGeo ? coords.lng : resolved.lng;
+    setGeoError(null);
     onSearch({
-      q: q.trim(),
+      q: serviceQuery,
       lat,
       lng,
       locationLabel: useGeo ? locationLabel : resolved.label,

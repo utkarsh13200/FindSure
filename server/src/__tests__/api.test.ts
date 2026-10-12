@@ -61,6 +61,17 @@ describe("API", () => {
     }
   });
 
+  it("GET /api/businesses/search still returns city shops for unmatched service text", async () => {
+    const res = await request(app).get("/api/businesses/search").query({
+      q: "Plumber",
+      lat: 19.076,
+      lng: 72.8777,
+      maxDistance: 10,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBeGreaterThanOrEqual(8);
+  });
+
   it("GET /api/businesses/:id/trust", async () => {
     const res = await request(app).get(`/api/businesses/${businessId}/trust`);
     expect(res.status).toBe(200);

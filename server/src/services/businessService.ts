@@ -186,23 +186,32 @@ export async function searchBusinesses(opts: {
     return { ...e, _rank: rank };
   });
 
-  let filtered = enriched.filter((b) => {
-    if (!query) return true;
-    const hay = `${b.name} ${b.category} laptop repair`.toLowerCase();
-    const tokens = query.split(/\s+/).filter(Boolean);
-    return tokens.some((t) => hay.includes(t));
-  });
+  // Local/city searches: distance first so every seeded city still returns shops
+  // even when the service query text does not match (e.g. "Plumber" in a laptop demo).
+  let filtered = enriched;
+  if (opts.maxDistanceKm != null) {
+    filtered = filtered.filter(
+      (b) => b.distanceKm == null || b.distanceKm <= opts.maxDistanceKm!
+    );
+  }
+
+  if (query) {
+    const textMatched = filtered.filter((b) => {
+      const hay = `${b.name} ${b.category} laptop repair service`.toLowerCase();
+      const tokens = query.split(/\s+/).filter(Boolean);
+      return tokens.some((t) => hay.includes(t));
+    });
+    // Keep text filter when it finds hits; otherwise keep nearby shops for city radius searches.
+    if (textMatched.length > 0 || opts.maxDistanceKm == null) {
+      filtered = textMatched;
+    }
+  }
 
   if (opts.filterOpenNow) {
     filtered = filtered.filter((b) => b.openNow);
   }
   if (opts.minRating != null) {
     filtered = filtered.filter((b) => (b.rating ?? 0) >= opts.minRating!);
-  }
-  if (opts.maxDistanceKm != null) {
-    filtered = filtered.filter(
-      (b) => b.distanceKm == null || b.distanceKm <= opts.maxDistanceKm!
-    );
   }
   if (opts.filterRecentlyVerified) {
     filtered = filtered.filter((b) => {

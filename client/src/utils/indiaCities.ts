@@ -729,6 +729,8 @@ export function resolveIndiaLocation(input: string): {
   lng: number;
   radiusKm: number;
   isIndiaWide: boolean;
+  /** True when the input did not match a known city (avoid empty India-center searches). */
+  unresolved?: boolean;
 } {
   const raw = input.trim().toLowerCase();
   if (!raw) {
@@ -791,13 +793,15 @@ export function resolveIndiaLocation(input: string): {
     };
   }
 
-  // Unknown place: never fall back to India-wide (that was returning shops 1000+ km away).
+  // Unknown place: mark unresolved so the UI can recover (e.g. parse city from query)
+  // instead of searching the empty India geographic center within 10 km.
   return {
     label: input.trim(),
     lat: INDIA_CENTER.lat,
     lng: INDIA_CENTER.lng,
     radiusKm: CITY_SEARCH_RADIUS_KM,
     isIndiaWide: false,
+    unresolved: true,
   };
 }
 
